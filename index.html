@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kasir Warung Makan</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            color: #333;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .menu-section {
+            flex: 2;
+            min-width: 300px;
+        }
+
+        .cart-section {
+            flex: 1.2;
+            min-width: 300px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 15px;
+        }
+
+        .menu-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: transform 0.1s, border 0.1s;
+            border: 2px solid transparent;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-2px);
+            border-color: #27ae60;
+        }
+
+        .menu-card h4 {
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .menu-card p {
+            color: #27ae60;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 8px 4px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+
+        .btn-qty {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 2px 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .summary {
+            border-top: 2px solid #ccc;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        .summary-row.total {
+            font-weight: bold;
+            font-size: 18px;
+            color: #2c3e50;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .btn-pay {
+            width: 100%;
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-pay:hover {
+            background: #219150;
+        }
+
+        /* Struk/Receipt Style */
+        #receipt-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .receipt-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+            text-align: center;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .receipt-content h3 { margin-bottom: 5px; }
+        .receipt-content p { font-size: 12px; margin-bottom: 10px; }
+        .receipt-table { width: 100%; margin-bottom: 10px; }
+        .receipt-table td { border: none; font-size: 12px; }
+
+        .btn-close {
+            background: #7f8c8d;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        @media print {
+            body * { visibility: hidden; }
+            #receipt-modal, #receipt-modal * { visibility: visible; }
+            #receipt-modal { position: absolute; left: 0; top: 0; background: none; }
+            .btn-close { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h2>Kasir Warung Makan</h2>
+    </header>
+
+    <div class="container">
+        <!-- Daftar Menu -->
+        <div class="menu-section">
+            <h3 style="margin-bottom: 15px;">Pilih Menu</h3>
+            <div class="menu-grid" id="menu-grid"></div>
+        </div>
+
+        <!-- Pesanan & Pembayaran -->
+        <div class="cart-section">
+            <h3>Pesanan</h3>
+            <table id="cart-table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Qty</th>
+                        <th>Harga</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="cart-items">
+                    <!-- Item masuk di sini -->
+                </tbody>
+            </table>
+
+            <div class="summary">
+                <div class="summary-row total">
+                    <span>Total:</span>
+                    <span id="total-price">Rp 0</span>
+                </div>
+                
+                <label for="cash-input">Uang Tunai (Rp):</label>
+                <input type="number" id="cash-input" placeholder="0" oninput="calculateChange()">
+
+                <div class="summary-row">
+                    <span>Kembalian:</span>
+                    <span id="change-price">Rp 0</span>
+                </div>
+
+                <button class="btn-pay" onclick="processPayment()">Cetak Struk & Bayar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Struk -->
+    <div id="receipt-modal">
+        <div class="receipt-content">
+            <h3>WARUNG MAKAN</h3>
+            <p id="receipt-date"></p>
+            <hr style="border-dash: 1px dashed #000; margin-bottom: 10px;">
+            <table class="receipt-table" id="receipt-items"></table>
+            <hr style="border-dash: 1px dashed #000; margin-top: 10px; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                <span>Total:</span><span id="receipt-total"></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                <span>Tunai:</span><span id="receipt-cash"></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold;">
+                <span>Kembali:</span><span id="receipt-change"></span>
+            </div>
+            <p style="margin-top: 15px;">Terima Kasih!</p>
+            <button class="btn-close" onclick="window.print()">Cetak</button>
+            <button class="btn-close" onclick="closeReceipt()">Tutup</button>
+        </div>
+    </div>
+
+    <script>
+        // Data Menu Warung Makan
+        const menuList = [
+            { id: 1, name: "Nasi Goreng", price: 15000 },
+            { id: 2, name: "Ayam Goreng + Nasi", price: 18000 },
+            { id: 3, name: "Soto Ayam + Nasi", price: 15000 },
+            { id: 4, name: "Mie Goreng / Rebus", price: 12000 },
+            { id: 5, name: "Es Teh Manis", price: 4000 },
+            { id: 6, name: "Teh Hangat", price: 3000 },
+            { id: 7, name: "Es Jeruk", price: 5000 },
+            { id: 8, name: "Kopi Hitam", price: 4000 }
+        ];
+
+        let cart = [];
+
+        // Menampilkan Menu ke Layar
+        function renderMenu() {
+            const menuGrid = document.getElementById('menu-grid');
+            menuGrid.innerHTML = '';
+            menuList.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'menu-card';
+                card.onclick = () => addToCart(item.id);
+                card.innerHTML = `
+                    <h4>${item.name}</h4>
+                    <p>Rp ${item.price.toLocaleString('id-ID')}</p>
+                `;
+                menuGrid.appendChild(card);
+            });
+        }
+
+        // Tambah Item ke Keranjang
+        function addToCart(id) {
+            const item = menuList.find(m => m.id === id);
+            const exist = cart.find(c => c.id === id);
+
+            if (exist) {
+                exist.qty++;
+            } else {
+                cart.push({ ...item, qty: 1 });
+            }
+            updateCart();
+        }
+
+        // Hapus/Kurang Item dari Keranjang
+        function removeFromCart(id) {
+            const exist = cart.find(c => c.id === id);
+            if (exist.qty > 1) {
+                exist.qty--;
+            } else {
+                cart = cart.filter(c => c.id !== id);
+            }
+            updateCart();
+        }
+
+        // Hitung Total
+        function getTotal() {
+            return cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+        }
+
+        // Update Tampilan Keranjang
+        function updateCart() {
+            const cartItems = document.getElementById('cart-items');
+            cartItems.innerHTML = '';
+
+            cart.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.name}</td>
+                    <td>${item.qty}</td>
+                    <td>Rp ${(item.price * item.qty).toLocaleString('id-ID')}</td>
+                    <td><button class="btn-qty" onclick="removeFromCart(${item.id})">-</button></td>
+                `;
+                cartItems.appendChild(row);
+            });
+
+            document.getElementById('total-price').innerText = `Rp ${getTotal().toLocaleString('id-ID')}`;
+            calculateChange();
+        }
+
+        // Hitung Kembalian
+        function calculateChange() {
+            const cash = parseFloat(document.getElementById('cash-input').value) || 0;
+            const change = cash - getTotal();
+            const changeElement = document.getElementById('change-price');
+
+            if (change >= 0) {
+                changeElement.innerText = `Rp ${change.toLocaleString('id-ID')}`;
+                changeElement.style.color = '#27ae60';
+            } else {
+                changeElement.innerText = `Kurang Rp ${Math.abs(change).toLocaleString('id-ID')}`;
+                changeElement.style.color = '#e74c3c';
+            }
+        }
+
+        // Proses Pembayaran dan Tampilkan Struk
+        function processPayment() {
+            const total = getTotal();
+            const cash = parseFloat(document.getElementById('cash-input').value) || 0;
+
+            if (cart.length === 0) {
+                alert("Keranjang masih kosong!");
+                return;
+            }
+
+            if (cash < total) {
+                alert("Uang pembayaran kurang!");
+                return;
+            }
+
+            // Tampilkan Struk
+            document.getElementById('receipt-date').innerText = new Date().toLocaleString('id-ID');
+            const receiptItems = document.getElementById('receipt-items');
+            receiptItems.innerHTML = '';
+
+            cart.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="text-align:left">${item.name} x${item.qty}</td>
+                    <td style="text-align:right">Rp ${(item.price * item.qty).toLocaleString('id-ID')}</td>
+                `;
+                receiptItems.appendChild(row);
+            });
+
+            document.getElementById('receipt-total').innerText = `Rp ${total.toLocaleString('id-ID')}`;
+            document.getElementById('receipt-cash').innerText = `Rp ${cash.toLocaleString('id-ID')}`;
+            document.getElementById('receipt-change').innerText = `Rp ${(cash - total).toLocaleString('id-ID')}`;
+
+            document.getElementById('receipt-modal').style.display = 'flex';
+        }
+
+        // Tutup Modal Struk & Reset
+        function closeReceipt() {
+            document.getElementById('receipt-modal').style.display = 'none';
+            cart = [];
+            document.getElementById('cash-input').value = '';
+            updateCart();
+        }
+
+        // Inisialisasi Tampilan
+        renderMenu();
+    </script>
+</body>
+</html>
